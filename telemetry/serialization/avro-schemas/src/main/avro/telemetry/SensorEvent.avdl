@@ -14,7 +14,7 @@ protocol SensorEventProtocol {
 		int luminosity;
 	}
 
-	//
+	// запись, предоставляющая данные с датчика движения
 	record MotionSensorAvro {
 		int link_quality;
 		boolean motion;
