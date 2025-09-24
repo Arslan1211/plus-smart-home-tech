@@ -1,4 +1,4 @@
-package ru.yandex.practicum.service.handler.hub;
+package ru.yandex.practicum.service.handler.hub.rest;
 
 import ru.yandex.practicum.model.hub.AbstractHubEvent;
 import ru.yandex.practicum.model.hub.HubEventType;
