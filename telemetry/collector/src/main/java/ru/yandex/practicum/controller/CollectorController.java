@@ -12,8 +12,8 @@ import ru.yandex.practicum.model.hub.AbstractHubEvent;
 import ru.yandex.practicum.model.hub.HubEventType;
 import ru.yandex.practicum.model.sensor.AbstractSensorEvent;
 import ru.yandex.practicum.model.sensor.SensorEventType;
-import ru.yandex.practicum.service.handler.hub.HubEventHandler;
-import ru.yandex.practicum.service.handler.sensor.SensorEventHandler;
+import ru.yandex.practicum.service.handler.hub.rest.HubEventHandler;
+import ru.yandex.practicum.service.handler.sensor.rest.SensorEventHandler;
 
 import java.util.List;
 import java.util.Map;
