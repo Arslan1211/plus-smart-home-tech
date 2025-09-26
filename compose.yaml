@@ -1,4 +1,20 @@
 services:
+
+  postgres:
+    image: postgres:16.1
+    container_name: postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: smart-home
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    healthcheck:
+      test: pg_isready -q -d $$POSTGRES_DB -U $$POSTGRES_USER
+      timeout: 5s
+      interval: 5s
+      retries: 10
+
   kafka:
     image: confluentinc/confluent-local:7.4.3
     hostname: kafka
