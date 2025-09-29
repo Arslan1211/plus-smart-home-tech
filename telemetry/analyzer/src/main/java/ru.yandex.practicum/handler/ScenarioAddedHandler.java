@@ -4,6 +4,8 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import ru.yandex.practicum.exception.ScenarioProcessingException;
+import ru.yandex.practicum.exception.SensorNotFoundException;
 import ru.yandex.practicum.kafka.telemetry.event.DeviceActionAvro;
 import ru.yandex.practicum.kafka.telemetry.event.HubEventAvro;
 import ru.yandex.practicum.kafka.telemetry.event.ScenarioAddedEventAvro;
@@ -36,29 +38,59 @@ public class ScenarioAddedHandler implements HubEventHandler {
     @Override
     @Transactional
     public void handle(HubEventAvro event) {
+        ScenarioAddedEventAvro scenarioAddedEvent = (ScenarioAddedEventAvro) event.getPayload();
+        String hubId = event.getHubId();
+        String scenarioName = scenarioAddedEvent.getName();
+
+        log.info("Обработка добавления сценария '{}' для хаба {}", scenarioName, hubId);
+
         try {
-            ScenarioAddedEventAvro scenarioAddedEvent = (ScenarioAddedEventAvro) event.getPayload();
-            Scenario scenario = scenarioRepository.findScenarioByHubIdAndNameContainingIgnoreCase(event.getHubId(),
-                    scenarioAddedEvent.getName()).orElseGet(() -> {
-                log.debug("Сценарий в базе данных не найден, создаем новый сценарий!");
-                return scenarioRepository.save(buildToScenario(event));
-            });
+            Scenario scenario = findOrCreateScenario(event, scenarioAddedEvent);
 
-            if (checkSensorsInScenarioConditions(scenarioAddedEvent, event.getHubId())) {
-                Set<Condition> conditions = buildToCondition(scenarioAddedEvent, scenario);
-                conditionRepository.saveAll(conditions);
-                log.info("Условия сценария сохранены!");
-            }
-            if (checkSensorsInScenarioActions(scenarioAddedEvent, event.getHubId())) {
-                Set<Action> actions = buildToAction(scenarioAddedEvent, scenario);
-                actionRepository.saveAll(actions);
-                log.info("Действия для сценария сохранены!");
-            }
-            log.info("Сценарий добавлен!");
+            validateAndSaveConditions(scenarioAddedEvent, hubId, scenario);
+            validateAndSaveActions(scenarioAddedEvent, hubId, scenario);
 
+            log.info("Сценарий '{}' успешно добавлен/обновлен", scenarioName);
+
+        } catch (SensorNotFoundException e) {
+            log.error("Не удалось найти сенсоры для сценария '{}'", scenarioName, e);
+            throw new ScenarioProcessingException("Сенсоры не найдены", e);
         } catch (Exception e) {
-            log.error("Ошибка сохранения сценария", e);
-            throw new RuntimeException("Не удалось сохранить сценарий", e);
+            log.error("Неожиданная ошибка при сохранении сценария '{}'", scenarioName, e);
+            throw new ScenarioProcessingException("Ошибка обработки сценария", e);
+        }
+    }
+
+    private Scenario findOrCreateScenario(HubEventAvro hubEvent, ScenarioAddedEventAvro scenarioAddedEvent) {
+        return scenarioRepository
+                .findScenarioByHubIdAndNameContainingIgnoreCase(hubEvent.getHubId(), scenarioAddedEvent.getName())
+                .orElseGet(() -> {
+                    log.debug("Создание нового сценария: {}", scenarioAddedEvent.getName());
+                    return scenarioRepository.save(buildToScenario(hubEvent));
+                });
+    }
+
+    private void validateAndSaveConditions(ScenarioAddedEventAvro scenarioAddedEvent,
+                                           String hubId, Scenario scenario) {
+        if (!scenarioAddedEvent.getConditions().isEmpty()) {
+            if (!checkSensorsInScenarioConditions(scenarioAddedEvent, hubId)) {
+                throw new SensorNotFoundException("Не все сенсоры из условий найдены");
+            }
+            Set<Condition> conditions = buildToCondition(scenarioAddedEvent, scenario);
+            conditionRepository.saveAll(conditions);
+            log.info("Сохранено {} условий для сценария {}", conditions.size(), scenario.getName());
+        }
+    }
+
+    private void validateAndSaveActions(ScenarioAddedEventAvro scenarioAddedEvent,
+                                        String hubId, Scenario scenario) {
+        if (!scenarioAddedEvent.getActions().isEmpty()) {
+            if (!checkSensorsInScenarioActions(scenarioAddedEvent, hubId)) {
+                throw new SensorNotFoundException("Не все сенсоры из действий найдены");
+            }
+            Set<Action> actions = buildToAction(scenarioAddedEvent, scenario);
+            actionRepository.saveAll(actions);
+            log.info("Сохранено {} действий для сценария {}", actions.size(), scenario.getName());
         }
     }
 
