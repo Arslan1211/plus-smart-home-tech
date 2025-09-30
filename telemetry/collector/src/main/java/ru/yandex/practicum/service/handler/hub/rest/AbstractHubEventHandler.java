@@ -44,7 +44,7 @@ public abstract class AbstractHubEventHandler<T extends SpecificRecordBase> impl
         client.getProducer().send(new ProducerRecord<>(
                 hubEventsTopic,
                 null,
-                event.getTimestamp().toEpochMilli(),
+                event.getTimestamp().getEpochSecond(),
                 event.getHubId(),
                 avro));
 
