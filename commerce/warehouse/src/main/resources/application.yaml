@@ -2,7 +2,7 @@ spring:
   #Db connection
   datasource:
     driverClassName: org.postgresql.Driver
-    url: jdbc:postgresql://localhost:5432/analyzer-db
+    url: jdbc:postgresql://localhost:9432/warehouse-db
     username: postgres
     password: postgres
   liquibase:
@@ -19,20 +19,27 @@ spring:
   sql.init.mode: always
 
   application:
-    name: analyzer
+    name: warehouse
   config:
     import: "configserver:"
   cloud:
     config:
       fail-fast: true
-      retry:
-        useRandomPolicy: true
-        max-interval: 6000
       discovery:
         enabled: true
         serviceId: config-server
+      retry:
+        useRandomPolicy: true
+        max-interval: 6000
 
 eureka:
+  instance:
+    instanceId: ${spring.application.name}:${spring.application.instance_id:${random.value}}
   client:
+    healthcheck:
+      enabled: true
     serviceUrl:
-      defaultZone: http://${eureka.instance.hostname:localhost}:${eureka.instance.port:8761}/eureka/
+      defaultZone: http://localhost:8761/eureka/
+
+server:
+  port: 0
