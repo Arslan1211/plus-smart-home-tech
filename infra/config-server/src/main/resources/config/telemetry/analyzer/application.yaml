@@ -4,7 +4,7 @@ spring:
   #Db connection
   datasource:
     driverClassName: org.postgresql.Driver
-    url: jdbc:postgresql://localhost:5432/postgres
+    url: jdbc:postgresql://localhost:5432/analyzer-db
     username: postgres
     password: postgres
   liquibase:

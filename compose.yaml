@@ -1,12 +1,57 @@
 services:
 
-  postgres:
+  analyzer-db:
     image: postgres:16.1
-    container_name: postgres
+    container_name: analyzer-db
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_DB: smart-home
+      POSTGRES_DB: analyzer-db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    healthcheck:
+      test: pg_isready -q -d $$POSTGRES_DB -U $$POSTGRES_USER
+      timeout: 5s
+      interval: 5s
+      retries: 10
+
+  shopping-store-db:
+    image: postgres:16.1
+    container_name: shopping-store-db
+    ports:
+      - "7432:5432"
+    environment:
+      POSTGRES_DB: shopping-store-db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    healthcheck:
+      test: pg_isready -q -d $$POSTGRES_DB -U $$POSTGRES_USER
+      timeout: 5s
+      interval: 5s
+      retries: 10
+
+  shopping-cart-db:
+    image: postgres:16.1
+    container_name: shopping-cart-db
+    ports:
+      - "8432:5432"
+    environment:
+      POSTGRES_DB: shopping-cart-db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    healthcheck:
+      test: pg_isready -q -d $$POSTGRES_DB -U $$POSTGRES_USER
+      timeout: 5s
+      interval: 5s
+      retries: 10
+
+  warehouse-db:
+    image: postgres:16.1
+    container_name: warehouse-db
+    ports:
+      - "9432:5432"
+    environment:
+      POSTGRES_DB: warehouse-db
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     healthcheck:
