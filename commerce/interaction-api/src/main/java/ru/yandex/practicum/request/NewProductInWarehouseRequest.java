@@ -25,5 +25,6 @@ public class NewProductInWarehouseRequest {
     private DimensionDto dimension;
 
     @Min(1)
+    @NotNull
     private Double weight;
 }

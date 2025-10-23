@@ -4,6 +4,8 @@ import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -17,6 +19,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 import org.hibernate.proxy.HibernateProxy;
+import ru.yandex.practicum.enums.ShoppingCartState;
 
 import java.util.Map;
 import java.util.Objects;
@@ -48,6 +51,9 @@ public class ShoppingCart {
     @MapKeyColumn(name = "product_id")
     @CollectionTable(name = "cart_products", joinColumns = @JoinColumn(name = "cart_id"))
     private Map<UUID, Long> products;
+
+    @Enumerated(EnumType.STRING)
+    private ShoppingCartState state;
 
     @Override
     public final boolean equals(Object o) {

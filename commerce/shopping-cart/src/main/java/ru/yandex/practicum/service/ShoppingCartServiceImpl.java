@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.yandex.practicum.dto.ShoppingCartDto;
 import ru.yandex.practicum.entity.ShoppingCart;
+import ru.yandex.practicum.enums.ShoppingCartState;
 import ru.yandex.practicum.exception.NoProductsInShoppingCartException;
 import ru.yandex.practicum.exception.NotAuthorizedUserException;
 import ru.yandex.practicum.feignclient.WarehouseFeignClient;
@@ -58,7 +59,12 @@ public class ShoppingCartServiceImpl implements ShoppingCartService {
     public void deactivatingUserCart(String username) {
         log.info("ShoppingCartServiceImpl -> Деактивация корзины товаров для пользователя: {}", username);
         ShoppingCart cart = getShoppingCartByUser(username);
-        cart.setActive(false);
+
+        if (cart.getState() == ShoppingCartState.DEACTIVATE) {
+            return;
+        }
+        cart.setState(ShoppingCartState.DEACTIVATE);
+        repository.save(cart);
         log.info("ShoppingCartServiceImpl -> Корзина деактивирована для пользователя: {}", username);
     }
 
