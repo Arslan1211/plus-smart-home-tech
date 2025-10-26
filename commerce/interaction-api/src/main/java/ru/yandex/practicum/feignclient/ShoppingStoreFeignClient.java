@@ -1,6 +1,7 @@
 package ru.yandex.practicum.feignclient;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.cloud.openfeign.SpringQueryMap;
 import org.springframework.data.domain.Page;
@@ -28,15 +29,15 @@ public interface ShoppingStoreFeignClient {
     ProductDto updateProduct(@RequestBody @Valid ProductDto productDto);
 
     @GetMapping("/{productId}")
-    ProductDto getProduct(@PathVariable UUID productId);
+    ProductDto getProduct(@PathVariable @NotNull UUID productId);
 
     @GetMapping
-    Page<ProductDto> getProducts(@RequestParam("category") ProductCategory category,
-                                 @SpringQueryMap Pageable pageable);
+    Page<ProductDto> getProducts(@RequestParam("category") @NotNull ProductCategory category,
+                                 @SpringQueryMap @Valid Pageable pageable);
 
     @PostMapping("/removeProductFromStore")
-    boolean removeProductFromStore(@RequestBody UUID productId);
+    boolean removeProductFromStore(@RequestBody @NotNull UUID productId);
 
     @PostMapping("/quantityState")
-    boolean setProductQuantityState(@ModelAttribute SetProductQuantityStateRequest request);
+    boolean setProductQuantityState(@ModelAttribute @Valid SetProductQuantityStateRequest request);
 }

@@ -7,6 +7,7 @@ import org.springframework.transaction.annotation.Transactional;
 import ru.yandex.practicum.dto.ShoppingCartDto;
 import ru.yandex.practicum.entity.ShoppingCart;
 import ru.yandex.practicum.enums.ShoppingCartState;
+import ru.yandex.practicum.exception.DeactivateShoppingCart;
 import ru.yandex.practicum.exception.NoProductsInShoppingCartException;
 import ru.yandex.practicum.exception.NotAuthorizedUserException;
 import ru.yandex.practicum.feignclient.WarehouseFeignClient;
@@ -44,12 +45,18 @@ public class ShoppingCartServiceImpl implements ShoppingCartService {
 
         ShoppingCart cart = getShoppingCartByUser(username);
 
-        if (cart.getActive() != false) {
-            cart.setProducts(request);
-            warehouse.checkProductAvailability(mapper.mapToDto(cart));
-            repository.save(cart);
-            log.info("ShoppingCartServiceImpl -> Товар добавлен в корзину: {}", cart);
+        if (cart.getState() == ShoppingCartState.DEACTIVATE) {
+            throw new DeactivateShoppingCart("Нельзя добавлять товары. Корзина деактивирована");
         }
+
+        Map<UUID, Long> currentProducts = cart.getProducts();
+        request.forEach((productId, quantity) ->
+                currentProducts.merge(productId, quantity, Long::sum)
+        );
+
+        warehouse.checkProductAvailability(mapper.mapToDto(cart));
+        repository.save(cart);
+        log.info("ShoppingCartServiceImpl -> Товар добавлен в корзину: {}", cart);
 
         return mapper.mapToDto(cart);
     }
@@ -61,8 +68,10 @@ public class ShoppingCartServiceImpl implements ShoppingCartService {
         ShoppingCart cart = getShoppingCartByUser(username);
 
         if (cart.getState() == ShoppingCartState.DEACTIVATE) {
+            log.info("Корзина уже деактивирована для пользователя: {}", username);
             return;
         }
+        log.info("Текущее состояние корзины: {}, меняем на DEACTIVATE", cart.getState());
         cart.setState(ShoppingCartState.DEACTIVATE);
         repository.save(cart);
         log.info("ShoppingCartServiceImpl -> Корзина деактивирована для пользователя: {}", username);
@@ -94,7 +103,12 @@ public class ShoppingCartServiceImpl implements ShoppingCartService {
         log.info("ShoppingCartServiceImpl -> Изменение количества товаров в корзине {}", request);
         ShoppingCart cart = getShoppingCartByUser(username);
 
-        cart.getProducts().put(request.getProductId(), request.getNewQuantity());
+        if (request.getNewQuantity() > 0) {
+            cart.getProducts().put(request.getProductId(), request.getNewQuantity());
+        } else {
+            cart.getProducts().remove(request.getProductId());
+        }
+
         ShoppingCart savedCart = repository.save(cart);
         log.info("ShoppingCartServiceImpl ->  Количества товаров в корзине изменено: {}", savedCart);
         return mapper.mapToDto(savedCart);

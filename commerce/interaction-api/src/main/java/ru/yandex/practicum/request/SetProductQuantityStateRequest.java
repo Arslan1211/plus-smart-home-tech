@@ -1,5 +1,6 @@
 package ru.yandex.practicum.request;
 
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -11,6 +12,10 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 public class SetProductQuantityStateRequest {
+
+    @NotNull(message = "ID товара не может быть null")
     private UUID productId;
+
+    @NotNull(message = "Количество товара не может быть null")
     private QuantityState quantityState;
 }

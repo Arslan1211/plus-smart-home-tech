@@ -1,11 +1,18 @@
 package ru.yandex.practicum.controller;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cloud.openfeign.SpringQueryMap;
 import org.springframework.data.domain.Page;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
 import org.springframework.data.domain.Pageable;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import ru.yandex.practicum.dto.ProductDto;
 import ru.yandex.practicum.enums.ProductCategory;
 import ru.yandex.practicum.feignclient.ShoppingStoreFeignClient;
@@ -23,7 +30,7 @@ public class ShoppingStoreController implements ShoppingStoreFeignClient {
     private final ShoppingStoreService service;
 
     @Override
-    public ProductDto createNewProduct(ProductDto productDto) {
+    public ProductDto createNewProduct(@Valid @RequestBody ProductDto productDto) {
         log.info("ShoppingStoreController: -> Создание нового товара в ассортименте: {}", productDto);
         ProductDto newProductDto = service.createNewProduct(productDto);
         log.info("ShoppingStoreController: -> Создан новый товар в ассортименте: {}", newProductDto);
@@ -31,7 +38,7 @@ public class ShoppingStoreController implements ShoppingStoreFeignClient {
     }
 
     @Override
-    public ProductDto updateProduct(ProductDto productDto) {
+    public ProductDto updateProduct(@Valid @RequestBody ProductDto productDto) {
         log.info("ShoppingStoreController: -> Обновление товара в ассортименте: {}", productDto);
         ProductDto updatedProductDto = service.updateProduct(productDto);
         log.info("ShoppingStoreController: -> Обновлен товар в ассортименте: {}", updatedProductDto);
@@ -39,7 +46,7 @@ public class ShoppingStoreController implements ShoppingStoreFeignClient {
     }
 
     @Override
-    public ProductDto getProduct(UUID productId) {
+    public ProductDto getProduct(@NotNull @PathVariable UUID productId) {
         log.info("ShoppingStoreController: -> Получение сведения по товару из БД по id: {}", productId);
         ProductDto dto = service.getProductById(productId);
         log.info("ShoppingStoreController: -> Получены сведения по товару из БД: {}", dto);
@@ -47,7 +54,8 @@ public class ShoppingStoreController implements ShoppingStoreFeignClient {
     }
 
     @Override
-    public Page<ProductDto> getProducts(ProductCategory category, Pageable pageable) {
+    public Page<ProductDto> getProducts(@NotNull @RequestParam("category") ProductCategory category,
+                                        @Valid @SpringQueryMap Pageable pageable) {
         log.info("ShoppingStoreController: -> Получение списка товаров по типу: {}", category);
         Page<ProductDto> products = service.getProducts(category, pageable);
         log.info("ShoppingStoreController: -> Получен список товаров по типу: {}", products);
@@ -55,7 +63,7 @@ public class ShoppingStoreController implements ShoppingStoreFeignClient {
     }
 
     @Override
-    public boolean removeProductFromStore(UUID productId) {
+    public boolean removeProductFromStore(@NotNull @RequestBody UUID productId) {
         log.info("ShoppingStoreController: -> Удаление товара с id: {}", productId);
         boolean delete = service.deleteProduct(productId);
         log.info("ShoppingStoreController: -> Удален товар с id: {}", productId);
@@ -63,7 +71,7 @@ public class ShoppingStoreController implements ShoppingStoreFeignClient {
     }
 
     @Override
-    public boolean setProductQuantityState(SetProductQuantityStateRequest request) {
+    public boolean setProductQuantityState(@Valid @ModelAttribute SetProductQuantityStateRequest request) {
         log.info("ShoppingStoreController: -> Установка статуса по товару: {}", request);
         boolean set = service.setQuantityState(request);
         log.info("ShoppingStoreController: -> Установлен статус: {}", request);

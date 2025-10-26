@@ -21,6 +21,7 @@ import lombok.ToString;
 import org.hibernate.proxy.HibernateProxy;
 import ru.yandex.practicum.enums.ShoppingCartState;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
@@ -50,7 +51,8 @@ public class ShoppingCart {
     @Column(name = "quantity")
     @MapKeyColumn(name = "product_id")
     @CollectionTable(name = "cart_products", joinColumns = @JoinColumn(name = "cart_id"))
-    private Map<UUID, Long> products;
+    @Builder.Default
+    private Map<UUID, Long> products = new HashMap<>();
 
     @Enumerated(EnumType.STRING)
     private ShoppingCartState state;
