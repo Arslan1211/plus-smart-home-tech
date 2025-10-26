@@ -11,6 +11,7 @@ import ru.yandex.practicum.entity.Address;
 import ru.yandex.practicum.entity.Product;
 import ru.yandex.practicum.exception.NoSpecifiedProductInWarehouseException;
 import ru.yandex.practicum.exception.ProductInShoppingCartLowQuantityInWarehouse;
+import ru.yandex.practicum.exception.ProductNotFoundException;
 import ru.yandex.practicum.exception.SpecifiedProductAlreadyInWarehouseException;
 import ru.yandex.practicum.mapper.WarehouseMapper;
 import ru.yandex.practicum.repository.WarehouseRepository;
@@ -43,48 +44,72 @@ public class WarehouseServiceImpl implements WarehouseService {
         log.info("WarehouseServiceImpl -> Добавлен новый товар на склад");
     }
 
-    @Override
-    public BookedProductsDto checkProductAvailability(ShoppingCartDto cart) {
-        log.info("WarehouseServiceImpl -> Проверка количества товаров на складе для корзины: {}", cart);
+   @Override
+   public BookedProductsDto checkProductAvailability(ShoppingCartDto cart) {
+       log.info("WarehouseServiceImpl -> Проверка количества товаров на складе для корзины: {}", cart);
 
-        double weight = 0;
-        double volume = 0;
-        boolean fragile = false;
+       validateProductQuantities(cart.getProducts());
 
-        Map<UUID, Long> cartProducts = cart.getProducts();
+       double weight = 0;
+       double volume = 0;
+       boolean fragile = false;
+
+       Map<UUID, Long> cartProducts = cart.getProducts();
+       Map<UUID, Product> products = repository.findAllById(cartProducts.keySet())
+               .stream()
+               .collect(Collectors.toMap(Product::getProductId, Function.identity()));
+
+       for (Map.Entry<UUID, Long> cartProduct : cartProducts.entrySet()) {
+           Product product = products.get(cartProduct.getKey());
+
+           double productVolume = product.getDimension().getHeight() *
+                   product.getDimension().getDepth() *
+                   product.getDimension().getWidth();
+
+           volume += productVolume * cartProduct.getValue();
+           weight += product.getWeight() * cartProduct.getValue();
+
+           if (product.getFragile()) {
+               fragile = true;
+           }
+       }
+
+       BookedProductsDto dto = BookedProductsDto.builder()
+               .deliveryVolume(volume)
+               .deliveryWeight(weight)
+               .fragile(fragile)
+               .build();
+
+       log.info("WarehouseServiceImpl -> Количество товаров на складе для корзины: {} проверено", cart);
+       log.info("WarehouseServiceImpl -> Объем и вес заказа: {}", dto);
+       return dto;
+   }
+
+    private void validateProductQuantities(Map<UUID, Long> cartProducts) {
+        log.info("Проверка наличия товаров на складе для корзины: {}", cartProducts);
+
         Map<UUID, Product> products = repository.findAllById(cartProducts.keySet())
                 .stream()
                 .collect(Collectors.toMap(Product::getProductId, Function.identity()));
 
         for (Map.Entry<UUID, Long> cartProduct : cartProducts.entrySet()) {
             Product product = products.get(cartProduct.getKey());
+            if (product == null) {
+                log.error("Товар с id: {} не найден в базе данных!", cartProduct.getKey());
+                throw new ProductNotFoundException(cartProduct.getKey());
+            }
+
             if (cartProduct.getValue() > product.getQuantity()) {
-                log.info("Товара с id: {}, на складе меньше, чем в корзине!", product.getProductId());
+                log.warn("Товара с id: {} на складе меньше, чем в корзине! На складе: {}, в корзине: {}",
+                        product.getProductId(), product.getQuantity(), cartProduct.getValue());
                 throw new ProductInShoppingCartLowQuantityInWarehouse();
             }
 
-            double productVolume =
-                    product.getDimension().getHeight() *
-                            product.getDimension().getDepth() *
-                            product.getDimension().getWidth();
-
-            volume += productVolume * cartProduct.getValue();
-            weight += product.getWeight() * cartProduct.getValue();
-
-            if (product.getFragile() == true) {
-                fragile = true;
-            }
+            log.debug("Товар с id: {} доступен в достаточном количестве: {}",
+                    product.getProductId(), product.getQuantity());
         }
 
-        BookedProductsDto dto = BookedProductsDto.builder()
-                .deliveryVolume(volume)
-                .deliveryWeight(weight)
-                .fragile(fragile)
-                .build();
-
-        log.info("WarehouseServiceImpl -> Количество товаров на складе для корзины: {} проверено", cart);
-        log.info("WarehouseServiceImpl -> Объем и вес заказа: {}", dto);
-        return dto;
+        log.info("Все товары доступны в достаточном количестве");
     }
 
     @Override

@@ -25,6 +25,7 @@ public class ShoppingStoreServiceImpl implements ShoppingStoreService {
 
     private final ProductRepository repository;
     private final ProductMapper mapper;
+    private final ProductRepository productRepository;
 
     @Override
     @Transactional
@@ -38,6 +39,7 @@ public class ShoppingStoreServiceImpl implements ShoppingStoreService {
     @Override
     @Transactional
     public ProductDto updateProduct(ProductDto productDto) {
+        checkExistsProduct(productDto.getProductId());
         log.info("ShoppingStoreServiceImpl -> Обновление товара: {}", productDto);
         Product product = findProductById(productDto.getProductId());
         mapper.update(productDto, product);
@@ -48,6 +50,7 @@ public class ShoppingStoreServiceImpl implements ShoppingStoreService {
 
     @Override
     public ProductDto getProductById(UUID productId) {
+        checkExistsProduct(productId);
         log.info("ShoppingStoreServiceImpl -> Получение сведений о товаре с id: {}", productId);
         Product product = findProductById(productId);
         log.info("ShoppingStoreServiceImpl -> Получены сведения о товаре: {}", product);
@@ -77,6 +80,7 @@ public class ShoppingStoreServiceImpl implements ShoppingStoreService {
     @Override
     @Transactional
     public boolean setQuantityState(SetProductQuantityStateRequest request) {
+        checkExistsProduct(request.getProductId());
         log.info("ShoppingStoreServiceImpl -> Установка статуса: {}", request);
         Product product = findProductById(request.getProductId());
         product.setQuantityState(request.getQuantityState());
@@ -86,8 +90,16 @@ public class ShoppingStoreServiceImpl implements ShoppingStoreService {
     }
 
     private Product findProductById(UUID productId) {
-        return repository.findById(productId).orElseThrow(
-                () -> new ProductNotFoundException(productId)
-        );
+        checkExistsProduct(productId);
+        return repository.findById(productId).get();
+    }
+
+    private void checkExistsProduct(UUID productId) {
+        boolean exists = productRepository.existsById(productId);
+
+        if (!exists) {
+            log.error("Товар с id: {} не найден", productId);
+            throw new ProductNotFoundException(productId);
+        }
     }
 }
