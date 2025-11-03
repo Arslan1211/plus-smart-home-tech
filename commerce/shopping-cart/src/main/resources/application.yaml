@@ -34,7 +34,9 @@ spring:
 
 eureka:
   instance:
-    instanceId: ${spring.application.name}:${spring.application.instance_id:${random.value}}
+    preferIpAddress: true
+    hostname: localhost
+    instance-id: "${spring.application.name}:${random.value}"
   client:
     healthcheck:
       enabled: true
