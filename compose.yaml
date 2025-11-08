@@ -1,5 +1,51 @@
 services:
 
+  order-db:
+    image: postgres:16.1
+    container_name: order-db
+    ports:
+      - "1432:5432"
+    environment:
+      POSTGRES_DB: order-db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    healthcheck:
+      test: pg_isready -q -d $$POSTGRES_DB -U $$POSTGRES_USER
+      timeout: 5s
+      interval: 5s
+      retries: 10
+
+  payment-db:
+    image: postgres:16.1
+    container_name: payment-db
+    ports:
+      - "2432:5432"
+    environment:
+      POSTGRES_DB: payment-db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    healthcheck:
+      test: pg_isready -q -d $$POSTGRES_DB -U $$POSTGRES_USER
+      timeout: 5s
+      interval: 5s
+      retries: 10
+
+
+  delivery-db:
+    image: postgres:16.1
+    container_name: delivery-db
+    ports:
+      - "3432:5432"
+    environment:
+      POSTGRES_DB: delivery-db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    healthcheck:
+      test: pg_isready -q -d $$POSTGRES_DB -U $$POSTGRES_USER
+      timeout: 5s
+      interval: 5s
+      retries: 10
+
   analyzer-db:
     image: postgres:16.1
     container_name: analyzer-db

@@ -1,11 +1,10 @@
+server:
+  port: 8080
+
 spring:
   cloud:
     gateway:
       discovery.locator.enabled: true
-      lower-case-service-id: true
-      httpclient:
-        connect-timeout: 1000
-        response-timeout: 5s
       routes:
         - id: shopping_cart_circuitbreaker_route
           uri: lb://shopping-cart
@@ -14,9 +13,6 @@ spring:
           filters:
             - PrefixPath=/api/v1
             - CircuitBreaker=myCircuitBreaker
-            - name: RequestSize
-              args:
-                maxSize: 5MB
 
         - id: shopping_store_service_route
           uri: lb://shopping-store
@@ -24,16 +20,15 @@ spring:
             - Path=/shopping-store/**
           filters:
             - PrefixPath=/api/v1
-            - CircuitBreaker=myCircuitBreaker
             - name: Retry
               args:
                 retries: 3
-                statuses: INTERNAL_SERVER_ERROR, BAD_GATEWAY, SERVICE_UNAVAILABLE
-                methods: GET
+                statuses: NOT_FOUND
                 backoff:
-                  firstBackoff: 100ms
-                  maxBackoff: 1s
+                  firstBackoff: 10ms
+                  maxBackoff: 50ms
                   factor: 2
+                  basedOnPreviousValue: false
 
         - id: warehouse_service_route
           uri: lb://warehouse
@@ -41,7 +36,27 @@ spring:
             - Path=/warehouse/**
           filters:
             - PrefixPath=/api/v1
-            - CircuitBreaker=myCircuitBreaker
+
+        - id: order_service_route
+          uri: lb://order
+          predicates:
+            - Path=/order/**
+          filters:
+            - PrefixPath=/api/v1
+
+        - id: delivery_service_route
+          uri: lb://delivery
+          predicates:
+            - Path=/delivery/**
+          filters:
+            - PrefixPath=/api/v1
+
+        - id: payment_service_route
+          uri: lb://payment
+          predicates:
+            - Path=/payment/**
+          filters:
+            - PrefixPath=/api/v1
 
 management:
   endpoints:
@@ -51,9 +66,6 @@ management:
   endpoint:
     health:
       show-details: always
-
-server:
-  port: 8080
 
 logging:
   level:

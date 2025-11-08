@@ -3,9 +3,9 @@ package ru.yandex.practicum.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.data.domain.Pageable;
 import ru.yandex.practicum.dto.ProductDto;
 import ru.yandex.practicum.entity.Product;
 import ru.yandex.practicum.enums.ProductCategory;
@@ -25,7 +25,6 @@ public class ShoppingStoreServiceImpl implements ShoppingStoreService {
 
     private final ProductRepository repository;
     private final ProductMapper mapper;
-    private final ProductRepository productRepository;
 
     @Override
     @Transactional
@@ -39,7 +38,6 @@ public class ShoppingStoreServiceImpl implements ShoppingStoreService {
     @Override
     @Transactional
     public ProductDto updateProduct(ProductDto productDto) {
-        checkExistsProduct(productDto.getProductId());
         log.info("ShoppingStoreServiceImpl -> Обновление товара: {}", productDto);
         Product product = findProductById(productDto.getProductId());
         mapper.update(productDto, product);
@@ -49,12 +47,15 @@ public class ShoppingStoreServiceImpl implements ShoppingStoreService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public ProductDto getProductById(UUID productId) {
-        checkExistsProduct(productId);
-        log.info("ShoppingStoreServiceImpl -> Получение сведений о товаре с id: {}", productId);
-        Product product = findProductById(productId);
-        log.info("ShoppingStoreServiceImpl -> Получены сведения о товаре: {}", product);
-        return mapper.mapToDto(product);
+        return mapper.mapToDto(findProductById(productId));
+    }
+
+    private Product findProductById(UUID productId) {
+        return repository.findById(productId).orElseThrow(
+                () -> new ProductNotFoundException("Товар с id = " + productId + " не найден или недоступен!")
+        );
     }
 
     @Override
@@ -66,40 +67,38 @@ public class ShoppingStoreServiceImpl implements ShoppingStoreService {
         return products;
     }
 
+
     @Override
     @Transactional
     public boolean deleteProduct(UUID productId) {
         log.info("ShoppingStoreServiceImpl -> Удаление товара с id: {} из ассортимента", productId);
         Product product = findProductById(productId);
         product.setProductState(ProductState.DEACTIVATE);
-        repository.save(product);
-        log.info("ShoppingStoreServiceImpl ->  Из ассортимента удален товар: {}", product);
+
+        try {
+            repository.save(product);
+            log.info("ShoppingStoreServiceImpl ->  Из ассортимента удален товар: {}", product);
+        } catch (Exception e) {
+            log.error("ShoppingStoreServiceImpl ->  Произошла ошибка при удалении товара: {}", product);
+            return false;
+        }
         return true;
     }
 
     @Override
     @Transactional
     public boolean setQuantityState(SetProductQuantityStateRequest request) {
-        checkExistsProduct(request.getProductId());
         log.info("ShoppingStoreServiceImpl -> Установка статуса: {}", request);
         Product product = findProductById(request.getProductId());
         product.setQuantityState(request.getQuantityState());
-        repository.save(product);
-        log.info("ShoppingStoreServiceImpl -> Установлен статус: {}", request.getQuantityState());
-        return true;
-    }
 
-    private Product findProductById(UUID productId) {
-        checkExistsProduct(productId);
-        return repository.findById(productId).get();
-    }
-
-    private void checkExistsProduct(UUID productId) {
-        boolean exists = productRepository.existsById(productId);
-
-        if (!exists) {
-            log.error("Товар с id: {} не найден", productId);
-            throw new ProductNotFoundException(productId);
+        try {
+            repository.save(product);
+            log.info("ShoppingStoreServiceImpl -> Установлен статус: {}", request.getQuantityState());
+        } catch (Exception e) {
+            log.error("ShoppingStoreServiceImpl ->  Произошла ошибка при установке статуса: {}", product);
+            return false;
         }
+        return true;
     }
 }

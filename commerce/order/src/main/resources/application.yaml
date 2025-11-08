@@ -1,0 +1,44 @@
+spring:
+  #Db connection
+  datasource:
+    driverClassName: org.postgresql.Driver
+    url: jdbc:postgresql://localhost:1432/order-db
+    username: postgres
+    password: postgres
+  liquibase:
+    enabled: true
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    properties.hibernate:
+      jdbc.time_zone: UTC
+      format_sql: true
+      temp.use_jdbc_metadata_defaults: false
+    hibernate.ddl-auto: create
+    show-sql: false
+  sql.init.mode: always
+
+  application:
+    name: order
+  config:
+    import: "configserver:"
+  cloud:
+    config:
+      fail-fast: true
+      retry:
+        useRandomPolicy: true
+        max-interval: 6000
+      discovery:
+        enabled: true
+        serviceId: config-server
+
+eureka:
+  instance:
+    preferIpAddress: true
+    hostname: localhost
+    instance-id: "${spring.application.name}:${random.value}"
+  client:
+    healthcheck:
+      enabled: true
+    serviceUrl:
+      defaultZone: http://localhost:8761/eureka/

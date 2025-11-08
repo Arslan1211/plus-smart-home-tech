@@ -1,11 +1,13 @@
 package ru.yandex.practicum.entity;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
-import jakarta.validation.constraints.Positive;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
+import java.math.BigDecimal;
 
 @Data
 @Embeddable
@@ -14,12 +16,12 @@ import lombok.NoArgsConstructor;
 @Builder(toBuilder = true)
 public class Dimension {
 
-    @Positive
-    private Double width;
+    @Column(precision = 19, scale = 4)
+    private BigDecimal width;
 
-    @Positive
-    private Double height;
+    @Column(precision = 19, scale = 4)
+    private BigDecimal height;
 
-    @Positive
-    private Double depth;
+    @Column(precision = 19, scale = 4)
+    private BigDecimal depth;
 }

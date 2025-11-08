@@ -25,7 +25,9 @@ public class ErrorHandler {
     @ExceptionHandler({
             ProductNotFoundException.class,
             NotFoundException.class,
-            NoProductsInShoppingCartException.class
+            NoProductsInShoppingCartException.class,
+            NoOrderFoundException.class,
+            NoDeliveryFoundException.class
     })
     @ResponseStatus(NOT_FOUND)
     public ApiError handlerNotFoundException(final NotFoundException e) {
@@ -58,7 +60,9 @@ public class ErrorHandler {
             IllegalStateException.class,
             SpecifiedProductAlreadyInWarehouseException.class,
             ProductInShoppingCartLowQuantityInWarehouse.class,
-            NoSpecifiedProductInWarehouseException.class
+            NoSpecifiedProductInWarehouseException.class,
+            NotEnoughInfoInOrderToCalculateException.class,
+            ProductInShoppingCartNotInWarehouse.class
     })
     @ResponseStatus(BAD_REQUEST)
     public ApiError handlerBadRequestException(final BadRequestException e) {

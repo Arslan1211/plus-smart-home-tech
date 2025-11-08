@@ -54,7 +54,7 @@ public class ShoppingCartServiceImpl implements ShoppingCartService {
                 currentProducts.merge(productId, quantity, Long::sum)
         );
 
-        warehouse.checkProductAvailability(mapper.mapToDto(cart));
+        warehouse.checkProductQuantityEnoughForShoppingCart(mapper.mapToDto(cart));
         repository.save(cart);
         log.info("ShoppingCartServiceImpl -> Товар добавлен в корзину: {}", cart);
 
