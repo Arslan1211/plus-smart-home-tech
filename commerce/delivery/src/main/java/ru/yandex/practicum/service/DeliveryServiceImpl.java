@@ -25,6 +25,13 @@ import java.util.UUID;
 @Transactional(readOnly = true)
 public class DeliveryServiceImpl implements DeliveryService {
 
+    private static final String WAREHOUSE_ADDRESS_1 = "ул. Складская, д. 1";
+    private static final String WAREHOUSE_ADDRESS_2 = "ул. Логистическая, д. 15";
+
+    private static final String FIRST_WAREHOUSE = "ADDRESS_1";
+    private static final String SECOND_WAREHOUSE = "ADDRESS_2";
+    private static final String OTHER_ADDRESS = "OTHER_ADDRESS";
+
     private final DeliveryRepository repository;
     private final DeliveryMapper mapper;
     private final OrderFeignClient orderClient;
@@ -113,7 +120,7 @@ public class DeliveryServiceImpl implements DeliveryService {
 
         Delivery delivery = getDeliveryById(order.getDeliveryId(), "Не найдена доставка для расчёта");
         String fromAddressStreet = delivery.getFromAddress().getStreet();
-        BigDecimal totalCost = getTotalCost(delivery, fromAddressStreet);
+        BigDecimal totalCost = calculateTotalCost(delivery, fromAddressStreet);
 
         delivery.setDeliveryWeight(order.getDeliveryWeight());
         delivery.setDeliveryVolume(order.getDeliveryVolume());
@@ -124,28 +131,64 @@ public class DeliveryServiceImpl implements DeliveryService {
         return totalCost;
     }
 
-    private BigDecimal getTotalCost(Delivery delivery, String fromAddressStreet) {
-        String toAddressString = delivery.getToAddress().getStreet();
+    private BigDecimal calculateTotalCost(Delivery delivery, String fromAddressStreet) {
+        String toAddressStreet = delivery.getToAddress().getStreet();
+
+        String fromAddressType = determineAddressType(fromAddressStreet);
+
+        log.debug("Расчет стоимости доставки. Отправление: {} ({}), Получатель: {}",
+                fromAddressStreet, fromAddressType, toAddressStreet);
 
         BigDecimal totalCost = baseCost;
 
-        if (!fromAddressStreet.equals("ADDRESS_2")) {
+        if (FIRST_WAREHOUSE.equals(fromAddressType)) {
             totalCost = totalCost.add(baseCost.multiply(warehouseAddress1Ratio));
-        } else {
+            log.debug("Применена надбавка для первого склада: {}", warehouseAddress1Ratio);
+        }
+        else if (SECOND_WAREHOUSE.equals(fromAddressType)) {
             totalCost = totalCost.add(baseCost.multiply(warehouseAddress2Ratio));
+            log.debug("Применена надбавка для второго склада: {}", warehouseAddress2Ratio);
+        }
+        else {
+            log.debug("Отправление из другого адреса, базовая стоимость без надбавки склада");
         }
 
-        if (delivery.getFragile().equals(Boolean.TRUE)) {
-            totalCost = totalCost.add(totalCost.multiply(fragileRatio));
+        // Надбавка за хрупкость
+        if (Boolean.TRUE.equals(delivery.getFragile())) {
+            BigDecimal fragileSurcharge = totalCost.multiply(fragileRatio);
+            totalCost = totalCost.add(fragileSurcharge);
+            log.debug("Применена надбавка за хрупкость: {}", fragileSurcharge);
         }
 
-        totalCost = totalCost.add(delivery.getDeliveryWeight().multiply(weightRatio));
-        totalCost = totalCost.add(delivery.getDeliveryVolume().multiply(volumeRatio));
+        // Надбавка за вес
+        BigDecimal weightSurcharge = delivery.getDeliveryWeight().multiply(weightRatio);
+        totalCost = totalCost.add(weightSurcharge);
+        log.debug("Надбавка за вес: {}", weightSurcharge);
 
-        if (!toAddressString.equals(fromAddressStreet)) {
-            totalCost = totalCost.add(totalCost.multiply(deliveryAddressRatio));
+        // Надбавка за объем
+        BigDecimal volumeSurcharge = delivery.getDeliveryVolume().multiply(volumeRatio);
+        totalCost = totalCost.add(volumeSurcharge);
+        log.debug("Надбавка за объем: {}", volumeSurcharge);
+
+        // Надбавка за доставку в другой адрес
+        if (!toAddressStreet.equals(fromAddressStreet)) {
+            BigDecimal addressSurcharge = totalCost.multiply(deliveryAddressRatio);
+            totalCost = totalCost.add(addressSurcharge);
+            log.debug("Применена надбавка за доставку в другой адрес: {}", addressSurcharge);
         }
+
+        log.debug("Итоговая стоимость доставки: {}", totalCost);
         return totalCost;
+    }
+
+    private String determineAddressType(String address) {
+        if (WAREHOUSE_ADDRESS_1.equals(address)) {
+            return FIRST_WAREHOUSE;
+        } else if (WAREHOUSE_ADDRESS_2.equals(address)) {
+            return SECOND_WAREHOUSE;
+        } else {
+            return OTHER_ADDRESS;
+        }
     }
 
     private Delivery getDeliveryById(UUID deliveryId, String error) {

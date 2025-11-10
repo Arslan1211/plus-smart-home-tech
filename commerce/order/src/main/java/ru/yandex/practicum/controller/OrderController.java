@@ -24,6 +24,9 @@ public class OrderController implements OrderFeignClient {
 
     @Override
     public Page<OrderDto> getUserOrders(String username, Pageable pageable) {
+        if (username == null || username.isBlank()) {
+            throw new IllegalArgumentException("Имя пользователя не может быть пустым");
+        }
         log.info("OrderController: -> Получение заказов пользователя: {}", username);
         Page<OrderDto> orders = service.getUserOrders(username, pageable);
         log.info("OrderController: -> Получен список заказов: {}", orders);

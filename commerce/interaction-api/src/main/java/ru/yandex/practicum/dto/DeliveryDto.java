@@ -1,5 +1,6 @@
 package ru.yandex.practicum.dto;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -20,9 +21,11 @@ public class DeliveryDto {
     private UUID deliveryId;
 
     @NotNull
+    @Valid
     private AddressDto fromAddress;
 
     @NotNull
+    @Valid
     private AddressDto toAddress;
 
     @NotNull
@@ -31,7 +34,6 @@ public class DeliveryDto {
     @NotNull
     private DeliveryState deliveryState;
 
-    // ДОБАВЬТЕ ЭТИ ПОЛЯ:
     @NotNull
     private BigDecimal deliveryVolume;
 

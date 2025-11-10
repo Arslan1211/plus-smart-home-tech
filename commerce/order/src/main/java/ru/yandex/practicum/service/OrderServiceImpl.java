@@ -107,6 +107,112 @@ public class OrderServiceImpl implements OrderService {
         return mapper.mapToDto(finalOrder);
     }
 
+    @Override
+    @Transactional
+    public OrderDto productReturn(ProductReturnRequest request) {
+        log.info("OrderService -> Запрос на возврат заказа: {}", request);
+
+        Order order = getOrderById(request.getOrderId());
+        warehouseClient.acceptReturn(request.getProducts());
+        order.setState(OrderState.PRODUCT_RETURNED);
+        OrderDto dto = mapper.mapToDto(repository.save(order));
+
+        log.info("OrderService -> Заказ пользователя после сборки: {}", dto);
+        return updateOrderState(request.getOrderId(), OrderState.PRODUCT_RETURNED);
+    }
+
+    @Override
+    @Transactional
+    public OrderDto payment(UUID orderId) {
+        log.info("OrderService -> Оплата заказа с id: {}", orderId);
+        OrderDto dto = updateOrderState(orderId, OrderState.PAID);
+        log.info("OrderService -> Заказ пользователя после оплаты: {}", dto);
+        return dto;
+    }
+
+    @Override
+    @Transactional
+    public OrderDto paymentFailed(UUID orderId) {
+        log.info("OrderController -> Оплата заказа с id: {} произошла с ошибкой!", orderId);
+
+        OrderDto dto = updateOrderState(orderId, OrderState.PAYMENT_FAILED);
+        log.info("OrderController -> Заказ пользователя после ошибки оплаты: {}", dto);
+        return dto;
+    }
+
+    @Override
+    @Transactional
+    public OrderDto delivery(UUID orderId) {
+        log.info("OrderService -> Доставка заказа с id: {}!", orderId);
+
+        OrderDto dto = updateOrderState(orderId, OrderState.DELIVERED);
+        log.info("OrderService -> Заказ пользователя после доставки: {}", dto);
+        return dto;
+    }
+
+    @Override
+    public OrderDto deliveryFailed(UUID orderId) {
+        log.info("OrderController -> Доставка заказа с id: {} произошла с ошибкой!", orderId);
+
+        OrderDto dto = updateOrderState(orderId, OrderState.DELIVERY_FAILED);
+        log.info("OrderController -> Заказ пользователя после ошибки доставки: {}", dto);
+        return dto;
+    }
+
+    @Override
+    @Transactional
+    public OrderDto complete(UUID orderId) {
+        log.info("OrderController -> Завершение заказа с id: {}!", orderId);
+
+        OrderDto dto = updateOrderState(orderId, OrderState.COMPLETED);
+        log.info("OrderController -> Заказ пользователя после всех стадий и завершенный: {}", dto);
+        return dto;
+    }
+
+    @Override
+    @Transactional
+    public OrderDto calculateTotal(UUID orderId) {
+        log.info("OrderController -> Расчёт стоимости заказа с id: {}!", orderId);
+        Order order = getOrderById(orderId);
+        OrderDto dto = mapper.mapToDto(repository.save(order));
+        log.info("OrderController -> Заказ пользователя с расчётом общей стоимости: {}", dto);
+        return paymentClient.getTotalCost(mapper.mapToDto(order));
+    }
+
+    @Override
+    @Transactional
+    public OrderDto calculateDelivery(UUID orderId) {
+        log.info("OrderController -> Расчёт стоимости доставки заказа с id: {}!", orderId);
+
+        Order order = getOrderById(orderId);
+        BigDecimal deliveryPrice = deliveryClient.deliveryCost(mapper.mapToDto(order));
+        order.setDeliveryPrice(deliveryPrice);
+        OrderDto dto = mapper.mapToDto(repository.save(order));
+
+        log.info("OrderController -> Заказ пользователя с расчётом доставки: {}", dto);
+        return dto;
+    }
+
+    @Override
+    @Transactional
+    public OrderDto assembly(UUID orderId) {
+        log.info("OrderController -> Сборка заказа с id: {}!", orderId);
+
+        OrderDto dto = updateOrderState(orderId, OrderState.ASSEMBLED);
+        log.info("OrderController -> Заказ пользователя после сборки: {}", dto);
+        return dto;
+    }
+
+    @Override
+    @Transactional
+    public OrderDto assemblyFailed(UUID orderId) {
+        log.info("OrderController -> Сборка заказа с id: {} произошла с ошибкой!", orderId);
+
+        OrderDto dto = updateOrderState(orderId, OrderState.ASSEMBLY_FAILED); // Исправлено с PAYMENT_FAILED на ASSEMBLY_FAILED
+        log.info("OrderController -> Заказ пользователя после ошибки сборки: {}", dto);
+        return dto;
+    }
+
     private Order processPayment(Order order) {
         OrderDto orderDto = mapper.mapToDto(order);
 
@@ -146,134 +252,11 @@ public class OrderServiceImpl implements OrderService {
         return deliveryClient.planDelivery(delivery);
     }
 
-    private OrderDto changeState(UUID orderId) {
+    private OrderDto updateOrderState(UUID orderId, OrderState orderState) {
         Order order = getOrderById(orderId);
-        order.setState(OrderState.ASSEMBLY_FAILED);
+        order.setState(orderState);
         Order savedOrder = repository.save(order);
         return mapper.mapToDto(savedOrder);
-    }
-
-    @Override
-    @Transactional
-    public OrderDto productReturn(ProductReturnRequest request) {
-        log.info("OrderService -> Запрос на возврат заказа: {}", request);
-
-        Order order = getOrderById(request.getOrderId());
-        warehouseClient.acceptReturn(request.getProducts());
-        order.setState(OrderState.PRODUCT_RETURNED);
-        OrderDto dto = mapper.mapToDto(repository.save(order));
-
-        log.info("OrderService -> Заказ пользователя после сборки: {}", dto);
-        return changeState(request.getOrderId());
-    }
-
-    @Override
-    @Transactional
-    public OrderDto payment(UUID orderId) {
-        log.info("OrderService -> Оплата заказа с id: {}", orderId);
-
-        Order order = getOrderById(orderId);
-        order.setState(OrderState.PAID);
-        OrderDto dto = mapper.mapToDto(repository.save(order));
-
-        log.info("OrderService -> Заказ пользователя после оплаты: {}", dto);
-        return changeState(orderId);
-    }
-
-    @Override
-    @Transactional
-    public OrderDto paymentFailed(UUID orderId) {
-        log.info("OrderController -> Оплата заказа  с id: {} произошла с ошибкой!", orderId);
-
-        Order order = getOrderById(orderId);
-        order.setState(OrderState.PAYMENT_FAILED);
-        OrderDto dto = mapper.mapToDto(repository.save(order));
-
-        log.info("OrderController -> Заказ пользователя после ошибки оплаты: {}", dto);
-        return changeState(orderId);
-    }
-
-    @Override
-    @Transactional
-    public OrderDto delivery(UUID orderId) {
-        log.info("OrderService -> Доставка заказа с id: {}!", orderId);
-
-        Order order = getOrderById(orderId);
-        order.setState(OrderState.DELIVERED);
-        OrderDto dto = mapper.mapToDto(repository.save(order));
-
-        log.info("OrderService -> Заказ пользователя после доставки: {}", dto);
-        return changeState(orderId);
-    }
-
-    @Override
-    public OrderDto deliveryFailed(UUID orderId) {
-        log.info("OrderController -> Доставка заказа с id: {} произошла с ошибкой!", orderId);
-
-        Order order = getOrderById(orderId);
-        order.setState(OrderState.DELIVERY_FAILED);
-        OrderDto dto = mapper.mapToDto(repository.save(order));
-
-        log.info("OrderController -> Заказ пользователя после ошибки доставки: {}", dto);
-        return changeState(orderId);
-    }
-
-    @Override
-    @Transactional
-    public OrderDto complete(UUID orderId) {
-        log.info("OrderController -> Завершение заказа с id: {}!", orderId);
-
-        Order order = getOrderById(orderId);
-        order.setState(OrderState.COMPLETED);
-        OrderDto dto = mapper.mapToDto(repository.save(order));
-
-        log.info("OrderController -> Заказ пользователя после всех стадий и завершенный: {}", dto);
-        return changeState(orderId);
-    }
-
-    @Override
-    @Transactional
-    public OrderDto calculateTotal(UUID orderId) {
-        log.info("OrderController -> Расчёт стоимости заказа с id: {}!", orderId);
-        Order order = getOrderById(orderId);
-        OrderDto dto = mapper.mapToDto(repository.save(order));
-        log.info("OrderController -> Заказ пользователя с расчётом общей стоимости: {}", dto);
-        return paymentClient.getTotalCost(mapper.mapToDto(order));
-    }
-
-    @Override
-    @Transactional
-    public OrderDto calculateDelivery(UUID orderId) {
-        log.info("OrderController -> Расчёт стоимости доставки заказа с id: {}!", orderId);
-
-        Order order = getOrderById(orderId);
-        BigDecimal deliveryPrice = deliveryClient.deliveryCost(mapper.mapToDto(order));
-        order.setDeliveryPrice(deliveryPrice);
-        OrderDto dto = mapper.mapToDto(repository.save(order));
-
-        log.info("OrderController -> Заказ пользователя с расчётом доставки: {}", dto);
-        return dto;
-    }
-
-    @Override
-    @Transactional
-    public OrderDto assembly(UUID orderId) {
-        log.info("OrderController -> Сборка заказа с id: {}!", orderId);
-
-        Order order = getOrderById(orderId);
-        order.setState(OrderState.ASSEMBLED);
-        OrderDto dto = mapper.mapToDto(repository.save(order));
-
-        log.info("OrderController -> Заказ пользователя после сборки: {}", dto);
-        return changeState(orderId);
-    }
-
-    @Override
-    @Transactional
-    public OrderDto assemblyFailed(UUID orderId) {
-        log.info("OrderController -> Сборка заказа с id - {}, произошла с ошибкой!", orderId);
-        log.info("OrderController -> Заказ пользователя после ошибки сборки: {}", changeState(orderId));
-        return changeState(orderId);
     }
 
     private static void checkUser(String username) {
