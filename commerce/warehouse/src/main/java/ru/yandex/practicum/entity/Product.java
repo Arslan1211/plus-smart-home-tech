@@ -27,7 +27,7 @@ import java.util.UUID;
 @ToString
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "products")
+@Table(name = "warehouse_product")
 @Builder(toBuilder = true)
 public class Product {
 

@@ -1,6 +1,3 @@
-DROP TABLE IF EXISTS cart CASCADE;
-DROP TABLE IF EXISTS cart_products CASCADE;
-
 CREATE TABLE IF NOT EXISTS cart
 (
     cart_id  UUID                  DEFAULT gen_random_uuid() PRIMARY KEY,

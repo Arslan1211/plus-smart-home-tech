@@ -1,0 +1,37 @@
+server:
+  port: 0
+
+spring:
+  application:
+    name: delivery
+  #Db connection
+  datasource:
+    driverClassName: org.postgresql.Driver
+    url: jdbc:postgresql://localhost:3432/delivery-db
+    username: postgres
+    password: postgres
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    properties.hibernate:
+      jdbc.time_zone: UTC
+      format_sql: true
+      temp.use_jdbc_metadata_defaults: false
+    hibernate.ddl-auto: create
+    show-sql: false
+  sql.init.mode: always
+
+delivery:
+  base_cost: 5.0
+  warehouse_address_1_ratio: 1
+  warehouse_address_2_ratio: 2
+  fragile_ratio: 0.2
+  weight_ratio: 0.3
+  volume_ratio: 0.2
+  delivery_address_ratio: 0.2
+
+logging:
+  level:
+    ru.yandex.practicum.commerce: TRACE
+    org:
+      springframework: ERROR
+      springframework.cloud.netflix.eureka: INFO
